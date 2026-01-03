@@ -4,6 +4,7 @@ import (
 	"context"
 	"log"
 	"net"
+	"os"
 	"testing"
 	"time"
 
@@ -13,7 +14,10 @@ import (
 )
 
 func startE2EServer(t *testing.T) (string, func()) {
-	url := "postgres://viraj:123456@localhost:5433/viraj?sslmode=disable"
+	url := os.Getenv("DATABASE_URL_FOR_TEST")
+	if url == "" {
+		t.Fatal("DATABASE_URL_FOR_TEST not set")
+	}
 
 	repo, err := NewPostgresRepository(url)
 	if err != nil {

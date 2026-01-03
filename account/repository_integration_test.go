@@ -11,7 +11,7 @@ import (
 var testRepo Repository
 
 func TestMain(m *testing.M) {
-	url := "postgres://viraj:123456@localhost:5433/viraj?sslmode=disable"
+	url := os.Getenv("DATABASE_URL_FOR_TEST")
 
 	r, err := NewPostgresRepository(url)
 	if err != nil {

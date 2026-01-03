@@ -17,6 +17,8 @@ jobs:
           POSTGRES_USER: viraj
           POSTGRES_PASSWORD: 123456
           POSTGRES_DB: account_test
+        ports:
+          - 5432:5432
         options: >-
           --health-cmd="pg_isready -U viraj"
           --health-interval=10s
@@ -24,7 +26,7 @@ jobs:
           --health-retries=5
 
     env:
-      DATABASE_URL_FOR_TEST: postgres://viraj:123456@localhost:5433/account_test?sslmode=disable
+      DATABASE_URL_FOR_TEST: postgres://viraj:123456@localhost:5432/account_test?sslmode=disable
 
     steps:
       - uses: actions/checkout@v4
@@ -35,7 +37,7 @@ jobs:
 
       - name: Wait for Postgres
         run: |
-          until pg_isready -h localhost -p 5433 -U viraj; do
+          until pg_isready -h localhost -p 5432 -U viraj; do
             echo "Waiting for DB..."
             sleep 2
           done

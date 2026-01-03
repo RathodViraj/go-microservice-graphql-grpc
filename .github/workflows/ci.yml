@@ -1,0 +1,48 @@
+name: CI
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    services:
+      account_db:
+        image: postgres:16
+        env:
+          POSTGRES_USER: viraj
+          POSTGRES_PASSWORD: 123456
+          POSTGRES_DB: account_test
+        options: >-
+          --health-cmd="pg_isready -U viraj"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
+    env:
+      DATABASE_URL_FOR_TEST: postgres://viraj:123456@localhost:5432/account_test?sslmode=disable
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.22"
+
+      - name: Wait for Postgres
+        run: |
+          until pg_isready -h localhost -p 5432 -U viraj; do
+            echo "Waiting for DB..."
+            sleep 2
+          done
+
+      - name: Apply schema
+        run: |
+          psql "$DATABASE_URL_FOR_TEST" -f account/up.sql
+
+      - name: Run tests
+        run: go test ./...

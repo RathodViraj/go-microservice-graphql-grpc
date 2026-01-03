@@ -3,9 +3,12 @@ package account
 import (
 	"context"
 	"database/sql"
+	"errors"
 
 	_ "github.com/lib/pq"
 )
+
+var ErrAccountNotFound = errors.New("account not found")
 
 type Repository interface {
 	Close()
@@ -52,6 +55,9 @@ func (r *postgresRepository) GetAccountByID(ctx context.Context, id string) (*Ac
 
 	a := &Account{}
 	if err := row.Scan(&a.ID, &a.Name); err != nil {
+		if err == sql.ErrNoRows {
+			return nil, ErrAccountNotFound
+		}
 		return nil, err
 	}
 

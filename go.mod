@@ -13,7 +13,10 @@ require (
 	google.golang.org/protobuf v1.36.11
 )
 
+require go.uber.org/mock v0.6.0
+
 require (
+	github.com/DATA-DOG/go-sqlmock v1.5.2
 	github.com/agnivade/levenshtein v1.2.1 // indirect
 	github.com/elastic/elastic-transport-go/v8 v8.8.0 // indirect
 	github.com/go-logr/logr v1.4.3 // indirect

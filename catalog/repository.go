@@ -41,7 +41,6 @@ func NewElasticRepository(url string) (Repository, error) {
 		return nil, fmt.Errorf("error creating elasticsearch client: %w", err)
 	}
 
-	// Test the connection
 	_, err = client.Info(client.Info.WithContext(context.Background()))
 	if err != nil {
 		return nil, fmt.Errorf("error connecting to elasticsearch: %w", err)
@@ -71,6 +70,7 @@ func (r *elasticRepository) PutProduct(ctx context.Context, p Product) error {
 		bytes.NewReader(data),
 		r.client.Index.WithContext(ctx),
 		r.client.Index.WithDocumentID(p.ID),
+		r.client.Index.WithRefresh("true"),
 	)
 	if err != nil {
 		return err

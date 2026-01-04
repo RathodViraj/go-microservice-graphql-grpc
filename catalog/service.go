@@ -6,19 +6,19 @@ import (
 	"github.com/segmentio/ksuid"
 )
 
+type Product struct {
+	ID          string  `json:"id"`
+	Name        string  `json:"name"`
+	Description string  `json:"description"`
+	Price       float64 `json:"price"`
+}
+
 type Service interface {
 	PostProduct(ctx context.Context, name, description string, price float64) (*Product, error)
 	GetProduct(ctx context.Context, id string) (*Product, error)
 	GetProducts(ctx context.Context, skip, take uint64) ([]Product, error)
 	GetProductsById(ctx context.Context, ids []string) ([]Product, error)
 	SearchProduct(ctx context.Context, query string, skip, take uint64) ([]Product, error)
-}
-
-type Product struct {
-	ID          string  `json:"id"`
-	Name        string  `json:"name"`
-	Description string  `json:"description"`
-	Price       float64 `json:"price"`
 }
 
 type catalogService struct {

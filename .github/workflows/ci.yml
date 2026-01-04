@@ -7,7 +7,30 @@ on:
     branches: [ "main" ]
 
 jobs:
-  test:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      account: ${{ steps.filter.outputs.account }}
+      catalog: ${{ steps.filter.outputs.catalog }}
+      common: ${{ steps.filter.outputs.common }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            account:
+              - 'account/**'
+            catalog:
+              - 'catalog/**'
+            common:
+              - 'go.mod'
+              - 'go.sum'
+              - '.github/workflows/**'
+
+  test-account:
+    needs: changes
+    if: ${{ needs.changes.outputs.account == 'true' || needs.changes.outputs.common == 'true' }}
     runs-on: ubuntu-latest
 
     services:
@@ -46,5 +69,45 @@ jobs:
         run: |
           psql "$DATABASE_URL_FOR_TEST" -f account/up.sql
 
-      - name: Run tests
-        run: go test ./...
+      - name: Run account tests
+        run: go test ./account/... -v
+
+  test-catalog:
+    needs: changes
+    if: ${{ needs.changes.outputs.catalog == 'true' || needs.changes.outputs.common == 'true' }}
+    runs-on: ubuntu-latest
+
+    services:
+      catalog_db:
+        image: elasticsearch:8.11.0
+        env:
+          discovery.type: single-node
+          xpack.security.enabled: false
+          ES_JAVA_OPTS: "-Xms512m -Xmx512m"
+        ports:
+          - 9200:9200
+        options: >-
+          --health-cmd="curl -f http://localhost:9200/_cluster/health || exit 1"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+
+    env:
+      ELASTICSEARCH_URL_FOR_TEST: http://localhost:9200
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.22"
+
+      - name: Wait for Elasticsearch
+        run: |
+          until curl -s http://localhost:9200/_cluster/health | grep -q '"status":"green"\|"status":"yellow"'; do
+            echo "Waiting for Elasticsearch..."
+            sleep 2
+          done
+
+      - name: Run catalog tests
+        run: go test ./catalog/... -v

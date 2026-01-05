@@ -13,7 +13,7 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 )
 
-func startE2EServer(t *testing.T) (string, func()) {
+func StartE2EServer(t *testing.T) (string, func()) {
 	url := os.Getenv("DATABASE_URL_FOR_TEST")
 	if url == "" {
 		t.Fatal("DATABASE_URL_FOR_TEST not set")
@@ -46,7 +46,7 @@ func startE2EServer(t *testing.T) (string, func()) {
 }
 
 func TestE2E_PostAndGetAccount(t *testing.T) {
-	addr, cleanup := startE2EServer(t)
+	addr, cleanup := StartE2EServer(t)
 	defer cleanup()
 
 	conn, err := grpc.NewClient(
@@ -83,7 +83,7 @@ func TestE2E_PostAndGetAccount(t *testing.T) {
 }
 
 func TestE2E_ListAccounts(t *testing.T) {
-	addr, cleanup := startE2EServer(t)
+	addr, cleanup := StartE2EServer(t)
 	defer cleanup()
 
 	conn, err := grpc.NewClient(

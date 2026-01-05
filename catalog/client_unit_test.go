@@ -19,8 +19,8 @@ func TestClient_PostProduct(t *testing.T) {
 		Return(&pb.PostProductResponse{Product: &pb.Product{Id: "p1", Name: "product", Description: "test product", Price: 3.23}}, nil)
 
 	c := &Client{
-		conn:    nil,
-		service: mockPB,
+		Conn:    nil,
+		Service: mockPB,
 	}
 
 	_, err := c.PostProduct(context.Background(), "product", "test product", 3.23)
@@ -36,7 +36,7 @@ func TestClient_GetProduct(t *testing.T) {
 	mockPB.EXPECT().
 		GetProduct(gomock.Any(), &pb.GetProductRequest{Id: "p1"}).
 		Return(&pb.GetProductResponse{Product: &pb.Product{Id: "p1", Name: "product", Description: "test product", Price: 3.23}}, nil)
-	c := &Client{service: mockPB}
+	c := &Client{Service: mockPB}
 
 	_, err := c.GetProduct(context.Background(), "p1")
 	if err != nil {
@@ -54,7 +54,7 @@ func TestClient_ListProducts(t *testing.T) {
 			{Id: "p1", Name: "product1", Description: "test product1", Price: 3.23},
 			{Id: "p2", Name: "product2", Description: "test product2", Price: 4.56},
 		}}, nil)
-	c := &Client{service: mockPB}
+	c := &Client{Service: mockPB}
 
 	_, err := c.GetProducts(context.Background(), 0, 2, nil, "")
 	if err != nil {

@@ -3,7 +3,6 @@ package account
 import (
 	"context"
 	"fmt"
-	"log"
 
 	"github.com/RathodViraj/go-microservice-graphql-grpc/account/pb"
 	"google.golang.org/grpc"
@@ -11,28 +10,26 @@ import (
 )
 
 type Client struct {
-	conn    *grpc.ClientConn
-	service pb.AccountServiceClient
+	Conn    *grpc.ClientConn
+	Service pb.AccountServiceClient
 }
 
 func NewClient(url string) (*Client, error) {
-	log.Printf("Connecting to account service at %s", url)
 	conn, err := grpc.NewClient(url, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create account client: %w", err)
 	}
 
 	c := pb.NewAccountServiceClient(conn)
-	log.Printf("Account client created successfully")
 	return &Client{conn, c}, nil
 }
 
 func (c *Client) Close() {
-	c.conn.Close()
+	c.Conn.Close()
 }
 
 func (c *Client) PostAccount(ctx context.Context, name string) (*Account, error) {
-	r, err := c.service.PostAccount(ctx, &pb.PostAccountRequest{Name: name})
+	r, err := c.Service.PostAccount(ctx, &pb.PostAccountRequest{Name: name})
 	if err != nil {
 		return nil, err
 	}
@@ -44,7 +41,7 @@ func (c *Client) PostAccount(ctx context.Context, name string) (*Account, error)
 }
 
 func (c *Client) GetAccount(ctx context.Context, id string) (*Account, error) {
-	res, err := c.service.GetAccount(
+	res, err := c.Service.GetAccount(
 		ctx,
 		&pb.GetAccountRequest{Id: id},
 	)
@@ -59,7 +56,7 @@ func (c *Client) GetAccount(ctx context.Context, id string) (*Account, error) {
 }
 
 func (c *Client) GetAccounts(ctx context.Context, skip, take uint64) ([]Account, error) {
-	res, err := c.service.GetAccounts(ctx, &pb.GetAccountsRequest{Skip: skip, Take: take})
+	res, err := c.Service.GetAccounts(ctx, &pb.GetAccountsRequest{Skip: skip, Take: take})
 	if err != nil {
 		return nil, err
 	}

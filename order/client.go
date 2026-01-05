@@ -3,7 +3,6 @@ package order
 import (
 	"context"
 	"fmt"
-	"log"
 	"time"
 
 	"github.com/RathodViraj/go-microservice-graphql-grpc/order/pb"
@@ -17,14 +16,12 @@ type Client struct {
 }
 
 func NewClient(url string) (*Client, error) {
-	log.Printf("Connecting to order service at %s", url)
 	conn, err := grpc.NewClient(url, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create order client: %w", err)
 	}
 
 	c := pb.NewOrderServiceClient(conn)
-	log.Printf("Order client created successfully")
 	return &Client{conn, c}, nil
 }
 

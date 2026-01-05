@@ -82,6 +82,10 @@ func (s *grpcServer) PostOrder(ctx context.Context, r *pb.PostOrderRequest) (*pb
 		}
 	}
 
+	if len(products) == 0 {
+		return nil, errors.New("products not found")
+	}
+
 	order, err := s.service.PostOrder(ctx, r.AccountId, products)
 	if err != nil {
 		log.Println("errors posting err: ", err)
@@ -132,7 +136,6 @@ func (s *grpcServer) GetOrdersForAccount(ctx context.Context, r *pb.GetOrdersFor
 
 	peoducts, err := s.catalogClient.GetProducts(ctx, 0, 0, productIds, "")
 	if err != nil {
-		log.Println("error getting account products: ", err)
 		return nil, err
 	}
 

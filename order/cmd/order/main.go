@@ -34,7 +34,7 @@ func main() {
 
 	var r order.Repository
 	for {
-		r, err = order.NewPostgresRepoitory(cfg.DatabaseURL)
+		r, err = order.NewPostgresRepository(cfg.DatabaseURL)
 		if err == nil {
 			break
 		}

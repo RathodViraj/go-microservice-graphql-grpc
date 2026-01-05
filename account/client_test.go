@@ -27,8 +27,8 @@ func TestClinet_PostAccount_Success(t *testing.T) {
 		}, nil)
 
 	c := &Client{
-		conn:    nil,
-		service: mockPB,
+		Conn:    nil,
+		Service: mockPB,
 	}
 
 	res, err := c.PostAccount(context.Background(), "viraj")
@@ -56,7 +56,7 @@ func TestClient_GetAccount_Success(t *testing.T) {
 			Account: &pb.Account{Id: "u1", Name: "Viraj"},
 		}, nil)
 
-	c := &Client{service: mockPB}
+	c := &Client{Service: mockPB}
 
 	acc, err := c.GetAccount(context.Background(), "u1")
 	if err != nil {
@@ -83,7 +83,7 @@ func TestClient_GetAccounts_Success(t *testing.T) {
 			},
 		}, nil)
 
-	c := &Client{service: mockPB}
+	c := &Client{Service: mockPB}
 
 	res, err := c.GetAccounts(context.Background(), 0, 2)
 	if err != nil {

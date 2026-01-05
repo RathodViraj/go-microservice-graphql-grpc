@@ -12,6 +12,7 @@ jobs:
     outputs:
       account: ${{ steps.filter.outputs.account }}
       catalog: ${{ steps.filter.outputs.catalog }}
+      order: ${{ steps.filter.outputs.order }}
       common: ${{ steps.filter.outputs.common }}
     steps:
       - uses: actions/checkout@v4
@@ -23,6 +24,8 @@ jobs:
               - 'account/**'
             catalog:
               - 'catalog/**'
+            order:
+              - 'order/**'
             common:
               - 'go.mod'
               - 'go.sum'
@@ -111,3 +114,91 @@ jobs:
 
       - name: Run catalog tests
         run: go test ./catalog/... -v
+  test-order:
+    runs-on: ubuntu-latest
+
+    services:
+      order_db:
+        image: postgres:16
+        env:
+          POSTGRES_USER: viraj
+          POSTGRES_PASSWORD: 123456
+          POSTGRES_DB: order_test
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd="pg_isready -U viraj"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
+      account_db:
+        image: postgres:16
+        env:
+          POSTGRES_USER: viraj
+          POSTGRES_PASSWORD: 123456
+          POSTGRES_DB: account_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U viraj"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
+      catalog_es:
+        image: elasticsearch:8.11.0
+        env:
+          discovery.type: single-node
+          xpack.security.enabled: false
+          ES_JAVA_OPTS: "-Xms512m -Xmx512m"
+        ports:
+          - 9200:9200
+        options: >-
+          --health-cmd="curl -f http://localhost:9200/_cluster/health || exit 1"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+
+    env:
+      DATABASE_URL_FOR_TEST: postgres://viraj:123456@localhost:5433/order_test?sslmode=disable
+      ELASTICSEARCH_URL_FOR_TEST: http://localhost:9200
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.22"
+
+      - name: Wait for Postgres (order)
+        run: |
+          until pg_isready -h localhost -p 5433 -U viraj; do
+            echo "Waiting for order DB..."
+            sleep 2
+          done
+
+      - name: Wait for Postgres (account)
+        run: |
+          until pg_isready -h localhost -p 5432 -U viraj; do
+            echo "Waiting for account DB..."
+            sleep 2
+          done
+
+      - name: Wait for Elasticsearch
+        run: |
+          until curl -s http://localhost:9200/_cluster/health | grep -q '"status":"green"\|"status":"yellow"'; do
+            echo "Waiting for Elasticsearch..."
+            sleep 2
+          done
+
+      - name: Apply order schema
+        run: |
+          psql "$DATABASE_URL_FOR_TEST" -f order/up.sql
+
+      - name: Apply account schema
+        run: |
+          psql "postgres://viraj:123456@localhost:5432/account_test?sslmode=disable" -f account/up.sql
+
+      - name: Run order tests
+        run: go test ./order/... -v

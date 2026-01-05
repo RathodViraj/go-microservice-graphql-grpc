@@ -3,7 +3,6 @@ package catalog
 import (
 	"context"
 	"fmt"
-	"log"
 
 	"github.com/RathodViraj/go-microservice-graphql-grpc/catalog/pb"
 	"google.golang.org/grpc"
@@ -11,29 +10,26 @@ import (
 )
 
 type Client struct {
-	conn    *grpc.ClientConn
-	service pb.CatalogServiceClient
+	Conn    *grpc.ClientConn
+	Service pb.CatalogServiceClient
 }
 
 func NewClient(url string) (*Client, error) {
-	log.Printf("Connecting to catalog service at %s", url)
 	conn, err := grpc.NewClient(url, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create catalog client: %w", err)
 	}
 
 	c := pb.NewCatalogServiceClient(conn)
-	log.Printf("Catalog client created successfully")
 	return &Client{conn, c}, nil
 }
 
 func (c *Client) Close() {
-	c.conn.Close()
+	c.Conn.Close()
 }
 
 func (c *Client) PostProduct(ctx context.Context, name, description string, price float64) (*Product, error) {
-	log.Printf("PostProduct called with name=%s, description=%s, price=%f", name, description, price)
-	res, err := c.service.PostProduct(
+	res, err := c.Service.PostProduct(
 		ctx,
 		&pb.PostProductRequest{
 			Name:        name,
@@ -55,7 +51,7 @@ func (c *Client) PostProduct(ctx context.Context, name, description string, pric
 }
 
 func (c *Client) GetProduct(ctx context.Context, id string) (*Product, error) {
-	res, err := c.service.GetProduct(
+	res, err := c.Service.GetProduct(
 		ctx,
 		&pb.GetProductRequest{
 			Id: id,
@@ -74,7 +70,7 @@ func (c *Client) GetProduct(ctx context.Context, id string) (*Product, error) {
 }
 
 func (c *Client) GetProducts(ctx context.Context, skip, take uint64, ids []string, query string) ([]Product, error) {
-	res, err := c.service.GetProducts(
+	res, err := c.Service.GetProducts(
 		ctx,
 		&pb.GetProductsRequest{
 			Skip:  skip,

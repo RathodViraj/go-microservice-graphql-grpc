@@ -51,7 +51,7 @@ func TestGRPC_PostAccount_Integration(t *testing.T) {
 	}
 
 	if res.Account.Name != "viraj" {
-		t.Errorf("expected Bob, got %s", res.Account.Name)
+		t.Errorf("expected viraj, got %s", res.Account.Name)
 	}
 }
 

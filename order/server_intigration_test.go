@@ -26,9 +26,9 @@ var (
 
 func setupIntegrationTest(t *testing.T) {
 	// Setup real account service with bufconn
-	accountURL := os.Getenv("DATABASE_URL_FOR_TEST")
+	accountURL := os.Getenv("ACCOUNT_DATABASE_URL_FOR_TEST")
 	if accountURL == "" {
-		accountURL = "postgres://viraj:123456@localhost:5433/viraj?sslmode=disable"
+		accountURL = "postgres://viraj:123456@localhost:5432/account_test?sslmode=disable"
 	}
 	accountRepo, err := account.NewPostgresRepository(accountURL)
 	if err != nil {

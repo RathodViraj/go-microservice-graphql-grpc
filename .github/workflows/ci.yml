@@ -162,6 +162,7 @@ jobs:
 
     env:
       DATABASE_URL_FOR_TEST: postgres://viraj:123456@localhost:5433/order_test?sslmode=disable
+      ACCOUNT_DATABASE_URL_FOR_TEST: postgres://viraj:123456@localhost:5432/account_test?sslmode=disable
       ELASTICSEARCH_URL_FOR_TEST: http://localhost:9200
 
     steps:

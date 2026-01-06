@@ -41,6 +41,18 @@ services:
       CATALOG_SERVICE_URL: catalog:8082
     restart: on-failure
 
+  inventory:
+    build:
+      context: .
+      dockerfile: ./inventory/app.docker
+    depends_on:
+      - inventory_db
+    ports:
+      -"8084:8084"
+    environment:
+      "http://redis_db:6379"
+    restart: on-failure
+
   graphql:
     build:
       context: .
@@ -89,4 +101,10 @@ services:
       POSTGRES_DB: viraj
       POSTGRES_USER: viraj
       POSTGRES_PASSWORD: 123456
+    restart: unless-stopped
+
+  inventory_db:
+    image: redis/redis-stack:latest
+    ports:
+      - "6379:6379"
     restart: unless-stopped

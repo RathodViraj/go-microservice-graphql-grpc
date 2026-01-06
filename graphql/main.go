@@ -10,9 +10,10 @@ import (
 )
 
 type AppConfig struct {
-	AccountURL string `envconfig:"ACCOUNT_SERVICE_URL"`
-	CatalogURL string `envconfig:"CATALOG_SERVICE_URL"`
-	OrderURL   string `envconfig:"ORDER_SERVICE_URL"`
+	AccountURL   string `envconfig:"ACCOUNT_SERVICE_URL"`
+	CatalogURL   string `envconfig:"CATALOG_SERVICE_URL"`
+	OrderURL     string `envconfig:"ORDER_SERVICE_URL"`
+	InventoryURL string `envconfig:"INVENTORY_SERVICE_URL"`
 }
 
 func main() {
@@ -32,13 +33,17 @@ func main() {
 	if cfg.OrderURL == "" {
 		cfg.OrderURL = "localhost:8083"
 	}
+	if cfg.InventoryURL == "" {
+		cfg.InventoryURL = "localhost:8084"
+	}
 
 	log.Printf("Starting GraphQL server with:")
 	log.Printf("  Account service: %s", cfg.AccountURL)
 	log.Printf("  Catalog service: %s", cfg.CatalogURL)
 	log.Printf("  Order service: %s", cfg.OrderURL)
+	log.Printf("  Inventory service: %s", cfg.InventoryURL)
 
-	s, err := NewGraphQLServer(cfg.AccountURL, cfg.OrderURL, cfg.CatalogURL)
+	s, err := NewGraphQLServer(cfg.AccountURL, cfg.OrderURL, cfg.CatalogURL, cfg.InventoryURL)
 	if err != nil {
 		log.Fatalf("Failed to create GraphQL server: %v", err)
 	}

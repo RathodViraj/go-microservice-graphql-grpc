@@ -83,3 +83,21 @@ func (r *mutationResolver) CreateOrder(ctx context.Context, in OrderInput) (*Ord
 		TotalPrice: order.TotalPrice,
 	}, nil
 }
+
+func (r *mutationResolver) UpdateStock(ctx context.Context, requests UpdateStocksRequestInput) (*OutOfStock, error) {
+	ctx, cancel := context.WithTimeout(ctx, 3*time.Second)
+	defer cancel()
+
+	var delatas []int32
+	for _, d := range requests.Deltas {
+		delatas = append(delatas, int32(d))
+	}
+
+	outOfStock, err := r.server.inventoryClient.UpdateStock(ctx, requests.Ids, delatas)
+	if err != nil {
+		log.Println(err)
+		return nil, err
+	}
+
+	return &OutOfStock{Ids: outOfStock}, nil
+}

@@ -1,0 +1,19 @@
+syntax = "proto3";
+
+package pb;
+
+option go_package = "./";
+
+message UpdateStockRequest {
+    repeated string pids = 1;
+    repeated int32 deltas = 2;
+}
+
+message UpdateStockResponse {
+    repeated string out_of_stock = 1;
+}
+
+service InventoryService {
+    rpc UpdateStock (UpdateStockRequest) returns (UpdateStockResponse) {
+    }
+}

@@ -53,13 +53,23 @@ input OrderInput {
     products: [OrderedProductInput!]!
 }
 
+input UpdateStocksRequestInput {
+    ids: [String!]!
+    deltas: [Int!]!
+}
+
+type OutOfStock {
+    ids: [String!]!
+}
+
 type Mutation {
     createAccount(account: AccountInput!): Account
     createProduct(product: ProductInput!): Product
     createOrder(order: OrderInput!): Order
+    updateStock(requests: UpdateStocksRequestInput!): OutOfStock
 }
 
 type Query {
-    account(pagination: PaginationInput, id: String): [Account!]!
+    accounts(pagination: PaginationInput, id: String): [Account!]!
     products(pagination: PaginationInput, query: String, id: String): [Product!]!
 }

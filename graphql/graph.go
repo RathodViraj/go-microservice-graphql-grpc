@@ -4,16 +4,18 @@ import (
 	"github.com/99designs/gqlgen/graphql"
 	"github.com/RathodViraj/go-microservice-graphql-grpc/account"
 	"github.com/RathodViraj/go-microservice-graphql-grpc/catalog"
+	"github.com/RathodViraj/go-microservice-graphql-grpc/inventory"
 	"github.com/RathodViraj/go-microservice-graphql-grpc/order"
 )
 
 type Server struct {
-	accountClient *account.Client
-	orderClient   *order.Client
-	catalogClient *catalog.Client
+	accountClient   *account.Client
+	orderClient     *order.Client
+	catalogClient   *catalog.Client
+	inventoryClient *inventory.Client
 }
 
-func NewGraphQLServer(accountURL, orderURL, catalogURL string) (*Server, error) {
+func NewGraphQLServer(accountURL, orderURL, catalogURL, inventoryURL string) (*Server, error) {
 	accountClient, err := account.NewClient(accountURL)
 	if err != nil {
 		return nil, err
@@ -32,10 +34,19 @@ func NewGraphQLServer(accountURL, orderURL, catalogURL string) (*Server, error) 
 		return nil, err
 	}
 
+	inventoryClient, err := inventory.NewClient(inventoryURL)
+	if err != nil {
+		accountClient.Close()
+		catalogClient.Close()
+		orderClient.Close()
+		return nil, err
+	}
+
 	return &Server{
-		accountClient: accountClient,
-		orderClient:   orderClient,
-		catalogClient: catalogClient,
+		accountClient:   accountClient,
+		orderClient:     orderClient,
+		catalogClient:   catalogClient,
+		inventoryClient: inventoryClient,
 	}, nil
 }
 

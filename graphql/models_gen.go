@@ -38,6 +38,10 @@ type OrderedProductInput struct {
 	Quantity int    `json:"quantity"`
 }
 
+type OutOfStock struct {
+	Ids []string `json:"ids"`
+}
+
 type PaginationInput struct {
 	Skip int `json:"skip"`
 	Take int `json:"take"`
@@ -57,4 +61,9 @@ type ProductInput struct {
 }
 
 type Query struct {
+}
+
+type UpdateStocksRequestInput struct {
+	Ids    []string `json:"ids"`
+	Deltas []int    `json:"deltas"`
 }

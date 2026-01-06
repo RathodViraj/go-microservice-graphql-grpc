@@ -116,7 +116,7 @@ jobs:
         run: go test ./catalog/... -v
   test-order:
     needs: changes
-    if: ${{ needs.changes.outputs.order == 'true' || needs.changes.outputs.catalog == 'true' || needs.changes.outputs.common == 'true' }}
+    if: ${{ needs.changes.outputs.order == 'true' || needs.changes.outputs.catalog == 'true' || needs.changes.outputs.account == 'true' }}
     runs-on: ubuntu-latest
 
     services:

@@ -4,6 +4,7 @@ import (
 	"context"
 	"embed"
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/redis/go-redis/v9"
@@ -12,6 +13,7 @@ import (
 type Repository interface {
 	Close()
 	UpdateStock(ctx context.Context, requests []Stock) ([]string, error)
+	CheckStock(ctx context.Context, pids []string) ([]int32, error)
 }
 
 type redisRepository struct {
@@ -82,6 +84,24 @@ func (r *redisRepository) UpdateStock(ctx context.Context, requests []Stock) ([]
 	}
 
 	return nil, nil
+}
+
+func (r *redisRepository) CheckStock(ctx context.Context, pids []string) ([]int32, error) {
+	inStock := []int32{}
+	base := "inventory:"
+	for _, id := range pids {
+		q, err := r.client.Get(ctx, base+id).Result()
+		if err != nil {
+			inStock = append(inStock, 0) // return out of stock
+		}
+		q_int, err := strconv.Atoi(q)
+		if err != nil {
+			inStock = append(inStock, 0) // return out of stock
+		}
+		inStock = append(inStock, int32(q_int))
+	}
+
+	return inStock, nil
 }
 
 //go:embed script.lua

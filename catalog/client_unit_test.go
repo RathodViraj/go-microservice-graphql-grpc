@@ -35,7 +35,7 @@ func TestClient_GetProduct(t *testing.T) {
 	mockPB := NewMockCatalogServiceClient(ctrl)
 	mockPB.EXPECT().
 		GetProduct(gomock.Any(), &pb.GetProductRequest{Id: "p1"}).
-		Return(&pb.GetProductResponse{Product: &pb.Product{Id: "p1", Name: "product", Description: "test product", Price: 3.23}}, nil)
+		Return(&pb.GetProductResponse{Product: &pb.ProductInResponse{Product: &pb.Product{Id: "p1", Name: "product", Description: "test product", Price: 3.23}, Quntity: 1}}, nil)
 	c := &Client{Service: mockPB}
 
 	_, err := c.GetProduct(context.Background(), "p1")
@@ -50,9 +50,9 @@ func TestClient_ListProducts(t *testing.T) {
 	mockPB := NewMockCatalogServiceClient(ctrl)
 	mockPB.EXPECT().
 		GetProducts(gomock.Any(), &pb.GetProductsRequest{Skip: 0, Take: 2}).
-		Return(&pb.GetProductsResponse{Products: []*pb.Product{
-			{Id: "p1", Name: "product1", Description: "test product1", Price: 3.23},
-			{Id: "p2", Name: "product2", Description: "test product2", Price: 4.56},
+		Return(&pb.GetProductsResponse{Products: []*pb.ProductInResponse{
+			{Product: &pb.Product{Id: "p1", Name: "product1", Description: "test product1", Price: 3.23}, Quntity: 1},
+			{Product: &pb.Product{Id: "p2", Name: "product2", Description: "test product2", Price: 4.56}, Quntity: 1},
 		}}, nil)
 	c := &Client{Service: mockPB}
 

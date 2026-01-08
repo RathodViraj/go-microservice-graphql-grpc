@@ -7,6 +7,8 @@ import (
 	"testing"
 
 	"github.com/RathodViraj/go-microservice-graphql-grpc/catalog/pb"
+	"github.com/RathodViraj/go-microservice-graphql-grpc/inventory"
+	inventorypb "github.com/RathodViraj/go-microservice-graphql-grpc/inventory/pb"
 	"go.uber.org/mock/gomock"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/test/bufconn"
@@ -14,11 +16,51 @@ import (
 
 const bufSize = 1024 * 1024
 
+// startFakeInventoryServer spins up a simple in-memory inventory gRPC server for testing.
+func startFakeInventoryServer(t *testing.T) (addr string, stop func()) {
+	t.Helper()
+	lis, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatalf("failed to listen: %v", err)
+	}
+	srv := grpc.NewServer()
+	inventorypb.RegisterInventoryServiceServer(srv, &fakeInventoryServer{})
+	go srv.Serve(lis)
+	stop = func() {
+		srv.Stop()
+		_ = lis.Close()
+	}
+	return lis.Addr().String(), stop
+}
+
+type fakeInventoryServer struct {
+	inventorypb.UnimplementedInventoryServiceServer
+}
+
+func (s *fakeInventoryServer) UpdateStock(ctx context.Context, r *inventorypb.UpdateStockRequest) (*inventorypb.UpdateStockResponse, error) {
+	return &inventorypb.UpdateStockResponse{OutOfStock: []string{}}, nil
+}
+
+func (s *fakeInventoryServer) CheckStock(ctx context.Context, r *inventorypb.CheckStockRequest) (*inventorypb.CheckStockResponse, error) {
+	in := make([]int32, len(r.Pids))
+	for i := range in {
+		in[i] = 100
+	}
+	return &inventorypb.CheckStockResponse{InStock: in}, nil
+}
+
 func startTestServer(t *testing.T, svc Service) (*grpc.ClientConn, func()) {
+	// Setup inventory client
+	invAddr, stopInv := startFakeInventoryServer(t)
+	invClient, err := inventory.NewClient(invAddr)
+	if err != nil {
+		t.Fatalf("failed to create inventory client: %v", err)
+	}
+
 	lis := bufconn.Listen(bufSize)
 
 	s := grpc.NewServer()
-	pb.RegisterCatalogServiceServer(s, &grpcServer{service: svc})
+	pb.RegisterCatalogServiceServer(s, &grpcServer{service: svc, inventoryClient: invClient})
 
 	go func() {
 		if err := s.Serve(lis); err != nil {
@@ -41,6 +83,8 @@ func startTestServer(t *testing.T, svc Service) (*grpc.ClientConn, func()) {
 
 	cleanup := func() {
 		conn.Close()
+		invClient.Close()
+		stopInv()
 		s.Stop()
 	}
 

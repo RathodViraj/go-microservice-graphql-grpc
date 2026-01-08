@@ -10,6 +10,8 @@ import (
 	accountpb "github.com/RathodViraj/go-microservice-graphql-grpc/account/pb"
 	"github.com/RathodViraj/go-microservice-graphql-grpc/catalog"
 	catalogpb "github.com/RathodViraj/go-microservice-graphql-grpc/catalog/pb"
+	"github.com/RathodViraj/go-microservice-graphql-grpc/inventory"
+	inventorypb "github.com/RathodViraj/go-microservice-graphql-grpc/inventory/pb"
 	"github.com/RathodViraj/go-microservice-graphql-grpc/order/pb"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -19,16 +21,17 @@ import (
 const bufSize = 1024 * 1024
 
 var (
-	integrationAccountClient *account.Client
-	integrationCatalogClient *catalog.Client
-	integrationOrderClient   pb.OrderServiceClient
+	integrationAccountClient   *account.Client
+	integrationCatalogClient   *catalog.Client
+	integrationInventoryClient *inventory.Client
+	integrationOrderClient     pb.OrderServiceClient
 )
 
 func setupIntegrationTest(t *testing.T) {
 	// Setup real account service with bufconn
 	accountURL := os.Getenv("ACCOUNT_DATABASE_URL_FOR_TEST")
 	if accountURL == "" {
-		accountURL = "postgres://viraj:123456@localhost:5432/account_test?sslmode=disable"
+		accountURL = "postgres://viraj:123456@localhost:5433/viraj?sslmode=disable"
 	}
 	accountRepo, err := account.NewPostgresRepository(accountURL)
 	if err != nil {
@@ -89,14 +92,37 @@ func setupIntegrationTest(t *testing.T) {
 	t.Cleanup(func() { catalogConn.Close() })
 	integrationCatalogClient = newCatalogClientWithConn(catalogConn)
 
+	// Setup fake inventory service with bufconn (in-memory)
+	inventoryLis := bufconn.Listen(bufSize)
+	inventorySrv := grpc.NewServer()
+	invSvc := &fakeInventoryService{}
+	inventorypb.RegisterInventoryServiceServer(inventorySrv, newInventoryGrpcServer(invSvc))
+	go inventorySrv.Serve(inventoryLis)
+	t.Cleanup(func() {
+		inventorySrv.Stop()
+		inventoryLis.Close()
+	})
+
+	inventoryConn, err := grpc.NewClient("passthrough://bufnet",
+		grpc.WithContextDialer(func(context.Context, string) (net.Conn, error) {
+			return inventoryLis.Dial()
+		}),
+		grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		t.Fatalf("failed to create inventory client: %v", err)
+	}
+	t.Cleanup(func() { inventoryConn.Close() })
+	integrationInventoryClient = newInventoryClientWithConn(inventoryConn)
+
 	// Setup order service with bufconn
 	orderSvc := &orderService{testRepo}
 	orderLis := bufconn.Listen(bufSize)
 	orderSrv := grpc.NewServer()
 	pb.RegisterOrderServiceServer(orderSrv, &grpcServer{
-		service:       orderSvc,
-		accountClient: integrationAccountClient,
-		catalogClient: integrationCatalogClient,
+		service:         orderSvc,
+		accountClient:   integrationAccountClient,
+		catalogClient:   integrationCatalogClient,
+		inventoryClient: integrationInventoryClient,
 	})
 	go orderSrv.Serve(orderLis)
 	t.Cleanup(func() {
@@ -116,6 +142,34 @@ func setupIntegrationTest(t *testing.T) {
 
 	integrationOrderClient = pb.NewOrderServiceClient(orderConn)
 }
+
+// Helper to create inventory gRPC server
+func newInventoryGrpcServer(service inventory.Service) inventorypb.InventoryServiceServer {
+	return &inventoryGrpcServer{service: service}
+}
+
+type inventoryGrpcServer struct {
+	inventorypb.UnimplementedInventoryServiceServer
+	service inventory.Service
+}
+
+func (s *inventoryGrpcServer) UpdateStock(ctx context.Context, r *inventorypb.UpdateStockRequest) (*inventorypb.UpdateStockResponse, error) {
+	out, err := s.service.UpdateStock(ctx, r.Pids, r.Deltas)
+	if err != nil {
+		return nil, err
+	}
+	return &inventorypb.UpdateStockResponse{OutOfStock: out}, nil
+}
+
+func (s *inventoryGrpcServer) CheckStock(ctx context.Context, r *inventorypb.CheckStockRequest) (*inventorypb.CheckStockResponse, error) {
+	inStock, err := s.service.CheckStock(ctx, r.Pids)
+	if err != nil {
+		return nil, err
+	}
+	return &inventorypb.CheckStockResponse{InStock: inStock}, nil
+}
+
+// Helpers to create clients with bufconn connections
 
 // Helper to create account gRPC server
 func newAccountGrpcServer(service account.Service) accountpb.AccountServiceServer {
@@ -177,13 +231,16 @@ func (s *catalogGrpcServer) GetProducts(ctx context.Context, r *catalogpb.GetPro
 	if err != nil {
 		return nil, err
 	}
-	products := []*catalogpb.Product{}
+	products := []*catalogpb.ProductInResponse{}
 	for _, p := range res {
-		products = append(products, &catalogpb.Product{
-			Id:          p.ID,
-			Name:        p.Name,
-			Description: p.Description,
-			Price:       p.Price,
+		products = append(products, &catalogpb.ProductInResponse{
+			Product: &catalogpb.Product{
+				Id:          p.ID,
+				Name:        p.Name,
+				Description: p.Description,
+				Price:       p.Price,
+			},
+			Quntity: 0,
 		})
 	}
 	return &catalogpb.GetProductsResponse{Products: products}, nil
@@ -202,6 +259,30 @@ func newCatalogClientWithConn(conn *grpc.ClientConn) *catalog.Client {
 		Conn:    conn,
 		Service: catalogpb.NewCatalogServiceClient(conn),
 	}
+}
+
+func newInventoryClientWithConn(conn *grpc.ClientConn) *inventory.Client {
+	return &inventory.Client{
+		Conn:    conn,
+		Service: inventorypb.NewInventoryServiceClient(conn),
+	}
+}
+
+// Simple in-memory inventory service used for tests
+type fakeInventoryService struct{}
+
+func (f *fakeInventoryService) UpdateStock(ctx context.Context, pids []string, deltas []int32) ([]string, error) {
+	// Always succeed and report no out-of-stock for integration tests
+	return []string{}, nil
+}
+
+func (f *fakeInventoryService) CheckStock(ctx context.Context, pids []string) ([]int32, error) {
+	// Return a large positive stock for all items
+	res := make([]int32, len(pids))
+	for i := range res {
+		res[i] = 100
+	}
+	return res, nil
 }
 
 func TestServer_PostOrder_Success(t *testing.T) {

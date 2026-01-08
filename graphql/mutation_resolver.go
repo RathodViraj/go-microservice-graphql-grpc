@@ -47,7 +47,6 @@ func (r *mutationResolver) CreateProduct(ctx context.Context, in ProductInput) (
 		return nil, err
 	}
 
-	log.Printf("Product created successfully: ID=%s, Name=%s", product.ID, product.Name)
 	return &Product{
 		ID:          product.ID,
 		Name:        product.Name,

@@ -44,7 +44,7 @@ func (r *queryResolver) Accounts(ctx context.Context, pagination *PaginationInpu
 	return accounts, nil
 }
 
-func (r *queryResolver) Products(ctx context.Context, pagination *PaginationInput, query, id *string) ([]*Product, error) {
+func (r *queryResolver) Products(ctx context.Context, pagination *PaginationInput, query, id *string) ([]*ProductInResponse, error) {
 	ctx, cancel := context.WithTimeout(ctx, 3*time.Second)
 	defer cancel()
 
@@ -54,12 +54,22 @@ func (r *queryResolver) Products(ctx context.Context, pagination *PaginationInpu
 			log.Println(err)
 			return nil, err
 		}
-		return []*Product{{
-			ID:          res.ID,
-			Name:        res.Name,
-			Description: res.Description,
-			Price:       res.Price,
-		}}, nil
+
+		resp := []*ProductInResponse{}
+		resp = append(
+			resp,
+			&ProductInResponse{
+				Product: &Product{
+					ID:          res.Product.ID,
+					Name:        res.Product.Name,
+					Description: res.Product.Description,
+					Price:       res.Product.Price,
+				},
+				Quantity: int(res.Quantity),
+			},
+		)
+
+		return resp, nil
 	}
 
 	skip, take := uint64(0), uint64(0)
@@ -76,14 +86,21 @@ func (r *queryResolver) Products(ctx context.Context, pagination *PaginationInpu
 		return nil, err
 	}
 
-	var products []*Product
+	var products []*ProductInResponse
+
 	for _, p := range productsList {
-		products = append(products, &Product{
-			ID:          p.ID,
-			Name:        p.Name,
-			Description: p.Description,
-			Price:       p.Price,
-		})
+		products = append(
+			products,
+			&ProductInResponse{
+				Product: &Product{
+					ID:          p.Product.ID,
+					Name:        p.Product.Name,
+					Description: p.Product.Description,
+					Price:       p.Product.Price,
+				},
+				Quantity: int(p.Quantity),
+			},
+		)
 	}
 
 	return products, nil
@@ -94,4 +111,17 @@ func (p PaginationInput) bounds() (uint64, uint64) {
 	takeValue := uint64(p.Take)
 
 	return skipValue, takeValue
+}
+
+func (r *queryResolver) CheckStock(ctx context.Context, in *CheckStockInput) ([]int, error) {
+	res_int32, err := r.server.inventoryClient.CheckStock(ctx, in.Ids)
+	if err != nil {
+		return nil, err
+	}
+
+	res := []int{}
+	for _, r := range res_int32 {
+		res = append(res, int(r))
+	}
+	return res, nil
 }

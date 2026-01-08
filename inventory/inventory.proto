@@ -13,7 +13,17 @@ message UpdateStockResponse {
     repeated string out_of_stock = 1;
 }
 
+message CheckStockRequest {
+    repeated string pids = 1;
+}
+
+message CheckStockResponse {
+    repeated int32 inStock = 2;
+}
+
 service InventoryService {
     rpc UpdateStock (UpdateStockRequest) returns (UpdateStockResponse) {
+    }
+    rpc CheckStock (CheckStockRequest) returns (CheckStockResponse) {
     }
 }

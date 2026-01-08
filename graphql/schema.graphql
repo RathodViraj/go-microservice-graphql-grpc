@@ -13,6 +13,11 @@ type Product {
     price: Float!
 }
 
+type ProductInResponse {
+    product: Product!
+    quantity: Int!
+}
+
 type Order {
     id: String!
     createdAt: Time!
@@ -58,6 +63,10 @@ input UpdateStocksRequestInput {
     deltas: [Int!]!
 }
 
+input CheckStockInput {
+    ids: [String!]!
+}
+
 type OutOfStock {
     ids: [String!]!
 }
@@ -71,5 +80,6 @@ type Mutation {
 
 type Query {
     accounts(pagination: PaginationInput, id: String): [Account!]!
-    products(pagination: PaginationInput, query: String, id: String): [Product!]!
+    products(pagination: PaginationInput, query: String, id: String): [ProductInResponse!]!
+    checkStock(pids: CheckStockInput): [Int!]! 
 }

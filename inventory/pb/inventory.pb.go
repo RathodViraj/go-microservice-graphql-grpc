@@ -7,12 +7,11 @@
 package pb
 
 import (
+	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
+	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"
 	sync "sync"
 	unsafe "unsafe"
-
-	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
-	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 )
 
 const (
@@ -118,6 +117,94 @@ func (x *UpdateStockResponse) GetOutOfStock() []string {
 	return nil
 }
 
+type CheckStockRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Pids          []string               `protobuf:"bytes,1,rep,name=pids,proto3" json:"pids,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CheckStockRequest) Reset() {
+	*x = CheckStockRequest{}
+	mi := &file_inventory_proto_msgTypes[2]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CheckStockRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CheckStockRequest) ProtoMessage() {}
+
+func (x *CheckStockRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_inventory_proto_msgTypes[2]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CheckStockRequest.ProtoReflect.Descriptor instead.
+func (*CheckStockRequest) Descriptor() ([]byte, []int) {
+	return file_inventory_proto_rawDescGZIP(), []int{2}
+}
+
+func (x *CheckStockRequest) GetPids() []string {
+	if x != nil {
+		return x.Pids
+	}
+	return nil
+}
+
+type CheckStockResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	InStock       []int32                `protobuf:"varint,2,rep,packed,name=inStock,proto3" json:"inStock,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CheckStockResponse) Reset() {
+	*x = CheckStockResponse{}
+	mi := &file_inventory_proto_msgTypes[3]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CheckStockResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CheckStockResponse) ProtoMessage() {}
+
+func (x *CheckStockResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_inventory_proto_msgTypes[3]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CheckStockResponse.ProtoReflect.Descriptor instead.
+func (*CheckStockResponse) Descriptor() ([]byte, []int) {
+	return file_inventory_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *CheckStockResponse) GetInStock() []int32 {
+	if x != nil {
+		return x.InStock
+	}
+	return nil
+}
+
 var File_inventory_proto protoreflect.FileDescriptor
 
 const file_inventory_proto_rawDesc = "" +
@@ -128,9 +215,15 @@ const file_inventory_proto_rawDesc = "" +
 	"\x06deltas\x18\x02 \x03(\x05R\x06deltas\"7\n" +
 	"\x13UpdateStockResponse\x12 \n" +
 	"\fout_of_stock\x18\x01 \x03(\tR\n" +
-	"outOfStock2T\n" +
+	"outOfStock\"'\n" +
+	"\x11CheckStockRequest\x12\x12\n" +
+	"\x04pids\x18\x01 \x03(\tR\x04pids\".\n" +
+	"\x12CheckStockResponse\x12\x18\n" +
+	"\ainStock\x18\x02 \x03(\x05R\ainStock2\x93\x01\n" +
 	"\x10InventoryService\x12@\n" +
-	"\vUpdateStock\x12\x16.pb.UpdateStockRequest\x1a\x17.pb.UpdateStockResponse\"\x00B\x04Z\x02./b\x06proto3"
+	"\vUpdateStock\x12\x16.pb.UpdateStockRequest\x1a\x17.pb.UpdateStockResponse\"\x00\x12=\n" +
+	"\n" +
+	"CheckStock\x12\x15.pb.CheckStockRequest\x1a\x16.pb.CheckStockResponse\"\x00B\x04Z\x02./b\x06proto3"
 
 var (
 	file_inventory_proto_rawDescOnce sync.Once
@@ -144,16 +237,20 @@ func file_inventory_proto_rawDescGZIP() []byte {
 	return file_inventory_proto_rawDescData
 }
 
-var file_inventory_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
+var file_inventory_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
 var file_inventory_proto_goTypes = []any{
 	(*UpdateStockRequest)(nil),  // 0: pb.UpdateStockRequest
 	(*UpdateStockResponse)(nil), // 1: pb.UpdateStockResponse
+	(*CheckStockRequest)(nil),   // 2: pb.CheckStockRequest
+	(*CheckStockResponse)(nil),  // 3: pb.CheckStockResponse
 }
 var file_inventory_proto_depIdxs = []int32{
 	0, // 0: pb.InventoryService.UpdateStock:input_type -> pb.UpdateStockRequest
-	1, // 1: pb.InventoryService.UpdateStock:output_type -> pb.UpdateStockResponse
-	1, // [1:2] is the sub-list for method output_type
-	0, // [0:1] is the sub-list for method input_type
+	2, // 1: pb.InventoryService.CheckStock:input_type -> pb.CheckStockRequest
+	1, // 2: pb.InventoryService.UpdateStock:output_type -> pb.UpdateStockResponse
+	3, // 3: pb.InventoryService.CheckStock:output_type -> pb.CheckStockResponse
+	2, // [2:4] is the sub-list for method output_type
+	0, // [0:2] is the sub-list for method input_type
 	0, // [0:0] is the sub-list for extension type_name
 	0, // [0:0] is the sub-list for extension extendee
 	0, // [0:0] is the sub-list for field type_name
@@ -170,7 +267,7 @@ func file_inventory_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_inventory_proto_rawDesc), len(file_inventory_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   2,
+			NumMessages:   4,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

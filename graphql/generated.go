@@ -87,9 +87,15 @@ type ComplexityRoot struct {
 		Price       func(childComplexity int) int
 	}
 
+	ProductInResponse struct {
+		Product  func(childComplexity int) int
+		Quantity func(childComplexity int) int
+	}
+
 	Query struct {
-		Accounts func(childComplexity int, pagination *PaginationInput, id *string) int
-		Products func(childComplexity int, pagination *PaginationInput, query *string, id *string) int
+		Accounts   func(childComplexity int, pagination *PaginationInput, id *string) int
+		CheckStock func(childComplexity int, pids *CheckStockInput) int
+		Products   func(childComplexity int, pagination *PaginationInput, query *string, id *string) int
 	}
 }
 
@@ -104,7 +110,8 @@ type MutationResolver interface {
 }
 type QueryResolver interface {
 	Accounts(ctx context.Context, pagination *PaginationInput, id *string) ([]*Account, error)
-	Products(ctx context.Context, pagination *PaginationInput, query *string, id *string) ([]*Product, error)
+	Products(ctx context.Context, pagination *PaginationInput, query *string, id *string) ([]*ProductInResponse, error)
+	CheckStock(ctx context.Context, pids *CheckStockInput) ([]int, error)
 }
 
 type executableSchema struct {
@@ -278,6 +285,19 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.Product.Price(childComplexity), true
 
+	case "ProductInResponse.product":
+		if e.complexity.ProductInResponse.Product == nil {
+			break
+		}
+
+		return e.complexity.ProductInResponse.Product(childComplexity), true
+	case "ProductInResponse.quantity":
+		if e.complexity.ProductInResponse.Quantity == nil {
+			break
+		}
+
+		return e.complexity.ProductInResponse.Quantity(childComplexity), true
+
 	case "Query.accounts":
 		if e.complexity.Query.Accounts == nil {
 			break
@@ -289,6 +309,17 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.Query.Accounts(childComplexity, args["pagination"].(*PaginationInput), args["id"].(*string)), true
+	case "Query.checkStock":
+		if e.complexity.Query.CheckStock == nil {
+			break
+		}
+
+		args, err := ec.field_Query_checkStock_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Query.CheckStock(childComplexity, args["pids"].(*CheckStockInput)), true
 	case "Query.products":
 		if e.complexity.Query.Products == nil {
 			break
@@ -310,6 +341,7 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 	ec := executionContext{opCtx, e, 0, 0, make(chan graphql.DeferredResult)}
 	inputUnmarshalMap := graphql.BuildUnmarshalerMap(
 		ec.unmarshalInputAccountInput,
+		ec.unmarshalInputCheckStockInput,
 		ec.unmarshalInputOrderInput,
 		ec.unmarshalInputOrderedProductInput,
 		ec.unmarshalInputPaginationInput,
@@ -499,6 +531,17 @@ func (ec *executionContext) field_Query_accounts_args(ctx context.Context, rawAr
 		return nil, err
 	}
 	args["id"] = arg1
+	return args, nil
+}
+
+func (ec *executionContext) field_Query_checkStock_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "pids", ec.unmarshalOCheckStockInput2ᚖgithubᚗcomᚋRathodVirajᚋgoᚑmicroserviceᚑgraphqlᚑgrpcᚋgraphqlᚐCheckStockInput)
+	if err != nil {
+		return nil, err
+	}
+	args["pids"] = arg0
 	return args, nil
 }
 
@@ -1286,6 +1329,74 @@ func (ec *executionContext) fieldContext_Product_price(_ context.Context, field 
 	return fc, nil
 }
 
+func (ec *executionContext) _ProductInResponse_product(ctx context.Context, field graphql.CollectedField, obj *ProductInResponse) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_ProductInResponse_product,
+		func(ctx context.Context) (any, error) {
+			return obj.Product, nil
+		},
+		nil,
+		ec.marshalNProduct2ᚖgithubᚗcomᚋRathodVirajᚋgoᚑmicroserviceᚑgraphqlᚑgrpcᚋgraphqlᚐProduct,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_ProductInResponse_product(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ProductInResponse",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_Product_id(ctx, field)
+			case "name":
+				return ec.fieldContext_Product_name(ctx, field)
+			case "description":
+				return ec.fieldContext_Product_description(ctx, field)
+			case "price":
+				return ec.fieldContext_Product_price(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Product", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ProductInResponse_quantity(ctx context.Context, field graphql.CollectedField, obj *ProductInResponse) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_ProductInResponse_quantity,
+		func(ctx context.Context) (any, error) {
+			return obj.Quantity, nil
+		},
+		nil,
+		ec.marshalNInt2int,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_ProductInResponse_quantity(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ProductInResponse",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _Query_accounts(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -1346,7 +1457,7 @@ func (ec *executionContext) _Query_products(ctx context.Context, field graphql.C
 			return ec.resolvers.Query().Products(ctx, fc.Args["pagination"].(*PaginationInput), fc.Args["query"].(*string), fc.Args["id"].(*string))
 		},
 		nil,
-		ec.marshalNProduct2ᚕᚖgithubᚗcomᚋRathodVirajᚋgoᚑmicroserviceᚑgraphqlᚑgrpcᚋgraphqlᚐProductᚄ,
+		ec.marshalNProductInResponse2ᚕᚖgithubᚗcomᚋRathodVirajᚋgoᚑmicroserviceᚑgraphqlᚑgrpcᚋgraphqlᚐProductInResponseᚄ,
 		true,
 		true,
 	)
@@ -1360,16 +1471,12 @@ func (ec *executionContext) fieldContext_Query_products(ctx context.Context, fie
 		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
-			case "id":
-				return ec.fieldContext_Product_id(ctx, field)
-			case "name":
-				return ec.fieldContext_Product_name(ctx, field)
-			case "description":
-				return ec.fieldContext_Product_description(ctx, field)
-			case "price":
-				return ec.fieldContext_Product_price(ctx, field)
+			case "product":
+				return ec.fieldContext_ProductInResponse_product(ctx, field)
+			case "quantity":
+				return ec.fieldContext_ProductInResponse_quantity(ctx, field)
 			}
-			return nil, fmt.Errorf("no field named %q was found under type Product", field.Name)
+			return nil, fmt.Errorf("no field named %q was found under type ProductInResponse", field.Name)
 		},
 	}
 	defer func() {
@@ -1380,6 +1487,47 @@ func (ec *executionContext) fieldContext_Query_products(ctx context.Context, fie
 	}()
 	ctx = graphql.WithFieldContext(ctx, fc)
 	if fc.Args, err = ec.field_Query_products_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Query_checkStock(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_Query_checkStock,
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.resolvers.Query().CheckStock(ctx, fc.Args["pids"].(*CheckStockInput))
+		},
+		nil,
+		ec.marshalNInt2ᚕintᚄ,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_Query_checkStock(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Query_checkStock_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return fc, err
 	}
@@ -2967,6 +3115,33 @@ func (ec *executionContext) unmarshalInputAccountInput(ctx context.Context, obj 
 	return it, nil
 }
 
+func (ec *executionContext) unmarshalInputCheckStockInput(ctx context.Context, obj any) (CheckStockInput, error) {
+	var it CheckStockInput
+	asMap := map[string]any{}
+	for k, v := range obj.(map[string]any) {
+		asMap[k] = v
+	}
+
+	fieldsInOrder := [...]string{"ids"}
+	for _, k := range fieldsInOrder {
+		v, ok := asMap[k]
+		if !ok {
+			continue
+		}
+		switch k {
+		case "ids":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("ids"))
+			data, err := ec.unmarshalNString2ᚕstringᚄ(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Ids = data
+		}
+	}
+
+	return it, nil
+}
+
 func (ec *executionContext) unmarshalInputOrderInput(ctx context.Context, obj any) (OrderInput, error) {
 	var it OrderInput
 	asMap := map[string]any{}
@@ -3496,6 +3671,50 @@ func (ec *executionContext) _Product(ctx context.Context, sel ast.SelectionSet, 
 	return out
 }
 
+var productInResponseImplementors = []string{"ProductInResponse"}
+
+func (ec *executionContext) _ProductInResponse(ctx context.Context, sel ast.SelectionSet, obj *ProductInResponse) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, productInResponseImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("ProductInResponse")
+		case "product":
+			out.Values[i] = ec._ProductInResponse_product(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "quantity":
+			out.Values[i] = ec._ProductInResponse_quantity(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.processDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
 var queryImplementors = []string{"Query"}
 
 func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) graphql.Marshaler {
@@ -3547,6 +3766,28 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 					}
 				}()
 				res = ec._Query_products(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx,
+					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
+		case "checkStock":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_checkStock(ctx, field)
 				if res == graphql.Null {
 					atomic.AddUint32(&fs.Invalids, 1)
 				}
@@ -4195,7 +4436,17 @@ func (ec *executionContext) unmarshalNOrderedProductInput2ᚖgithubᚗcomᚋRath
 	return &res, graphql.ErrorOnPath(ctx, err)
 }
 
-func (ec *executionContext) marshalNProduct2ᚕᚖgithubᚗcomᚋRathodVirajᚋgoᚑmicroserviceᚑgraphqlᚑgrpcᚋgraphqlᚐProductᚄ(ctx context.Context, sel ast.SelectionSet, v []*Product) graphql.Marshaler {
+func (ec *executionContext) marshalNProduct2ᚖgithubᚗcomᚋRathodVirajᚋgoᚑmicroserviceᚑgraphqlᚑgrpcᚋgraphqlᚐProduct(ctx context.Context, sel ast.SelectionSet, v *Product) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			graphql.AddErrorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._Product(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalNProductInResponse2ᚕᚖgithubᚗcomᚋRathodVirajᚋgoᚑmicroserviceᚑgraphqlᚑgrpcᚋgraphqlᚐProductInResponseᚄ(ctx context.Context, sel ast.SelectionSet, v []*ProductInResponse) graphql.Marshaler {
 	ret := make(graphql.Array, len(v))
 	var wg sync.WaitGroup
 	isLen1 := len(v) == 1
@@ -4219,7 +4470,7 @@ func (ec *executionContext) marshalNProduct2ᚕᚖgithubᚗcomᚋRathodVirajᚋg
 			if !isLen1 {
 				defer wg.Done()
 			}
-			ret[i] = ec.marshalNProduct2ᚖgithubᚗcomᚋRathodVirajᚋgoᚑmicroserviceᚑgraphqlᚑgrpcᚋgraphqlᚐProduct(ctx, sel, v[i])
+			ret[i] = ec.marshalNProductInResponse2ᚖgithubᚗcomᚋRathodVirajᚋgoᚑmicroserviceᚑgraphqlᚑgrpcᚋgraphqlᚐProductInResponse(ctx, sel, v[i])
 		}
 		if isLen1 {
 			f(i)
@@ -4239,14 +4490,14 @@ func (ec *executionContext) marshalNProduct2ᚕᚖgithubᚗcomᚋRathodVirajᚋg
 	return ret
 }
 
-func (ec *executionContext) marshalNProduct2ᚖgithubᚗcomᚋRathodVirajᚋgoᚑmicroserviceᚑgraphqlᚑgrpcᚋgraphqlᚐProduct(ctx context.Context, sel ast.SelectionSet, v *Product) graphql.Marshaler {
+func (ec *executionContext) marshalNProductInResponse2ᚖgithubᚗcomᚋRathodVirajᚋgoᚑmicroserviceᚑgraphqlᚑgrpcᚋgraphqlᚐProductInResponse(ctx context.Context, sel ast.SelectionSet, v *ProductInResponse) graphql.Marshaler {
 	if v == nil {
 		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
 			graphql.AddErrorf(ctx, "the requested element is null which the schema does not allow")
 		}
 		return graphql.Null
 	}
-	return ec._Product(ctx, sel, v)
+	return ec._ProductInResponse(ctx, sel, v)
 }
 
 func (ec *executionContext) unmarshalNProductInput2githubᚗcomᚋRathodVirajᚋgoᚑmicroserviceᚑgraphqlᚑgrpcᚋgraphqlᚐProductInput(ctx context.Context, v any) (ProductInput, error) {
@@ -4609,6 +4860,14 @@ func (ec *executionContext) marshalOBoolean2ᚖbool(ctx context.Context, sel ast
 	_ = ctx
 	res := graphql.MarshalBoolean(*v)
 	return res
+}
+
+func (ec *executionContext) unmarshalOCheckStockInput2ᚖgithubᚗcomᚋRathodVirajᚋgoᚑmicroserviceᚑgraphqlᚑgrpcᚋgraphqlᚐCheckStockInput(ctx context.Context, v any) (*CheckStockInput, error) {
+	if v == nil {
+		return nil, nil
+	}
+	res, err := ec.unmarshalInputCheckStockInput(ctx, v)
+	return &res, graphql.ErrorOnPath(ctx, err)
 }
 
 func (ec *executionContext) marshalOOrder2ᚖgithubᚗcomᚋRathodVirajᚋgoᚑmicroserviceᚑgraphqlᚑgrpcᚋgraphqlᚐOrder(ctx context.Context, sel ast.SelectionSet, v *Order) graphql.Marshaler {

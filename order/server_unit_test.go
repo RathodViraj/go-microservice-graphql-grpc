@@ -10,6 +10,8 @@ import (
 	accountpb "github.com/RathodViraj/go-microservice-graphql-grpc/account/pb"
 	"github.com/RathodViraj/go-microservice-graphql-grpc/catalog"
 	catalogpb "github.com/RathodViraj/go-microservice-graphql-grpc/catalog/pb"
+	"github.com/RathodViraj/go-microservice-graphql-grpc/inventory"
+	inventorypb "github.com/RathodViraj/go-microservice-graphql-grpc/inventory/pb"
 	"github.com/RathodViraj/go-microservice-graphql-grpc/order/pb"
 	"go.uber.org/mock/gomock"
 	"google.golang.org/grpc"
@@ -17,7 +19,6 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-// startMockAccountServer spins up a real gRPC server backed by a gomock implementation.
 func startMockAccountServer(t *testing.T, ctrl *gomock.Controller) (addr string, mock *MockAccountServiceServer, stop func()) {
 	t.Helper()
 	lis, err := net.Listen("tcp", "127.0.0.1:0")
@@ -35,7 +36,6 @@ func startMockAccountServer(t *testing.T, ctrl *gomock.Controller) (addr string,
 	return lis.Addr().String(), mock, stop
 }
 
-// startMockCatalogServer spins up a real gRPC server backed by a gomock implementation.
 func startMockCatalogServer(t *testing.T, ctrl *gomock.Controller) (addr string, mock *MockCatalogServiceServer, stop func()) {
 	t.Helper()
 	lis, err := net.Listen("tcp", "127.0.0.1:0")
@@ -51,6 +51,38 @@ func startMockCatalogServer(t *testing.T, ctrl *gomock.Controller) (addr string,
 		_ = lis.Close()
 	}
 	return lis.Addr().String(), mock, stop
+}
+
+func startFakeInventoryServer(t *testing.T) (addr string, stop func()) {
+	t.Helper()
+	lis, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatalf("failed to listen: %v", err)
+	}
+	srv := grpc.NewServer()
+	inventorypb.RegisterInventoryServiceServer(srv, &fakeInventoryServer{})
+	go srv.Serve(lis)
+	stop = func() {
+		srv.Stop()
+		_ = lis.Close()
+	}
+	return lis.Addr().String(), stop
+}
+
+type fakeInventoryServer struct {
+	inventorypb.UnimplementedInventoryServiceServer
+}
+
+func (s *fakeInventoryServer) UpdateStock(ctx context.Context, r *inventorypb.UpdateStockRequest) (*inventorypb.UpdateStockResponse, error) {
+	return &inventorypb.UpdateStockResponse{OutOfStock: []string{}}, nil
+}
+
+func (s *fakeInventoryServer) CheckStock(ctx context.Context, r *inventorypb.CheckStockRequest) (*inventorypb.CheckStockResponse, error) {
+	in := make([]int32, len(r.Pids))
+	for i := range in {
+		in[i] = 100
+	}
+	return &inventorypb.CheckStockResponse{InStock: in}, nil
 }
 
 func TestUnitServer_PostOrder_Success(t *testing.T) {
@@ -73,16 +105,27 @@ func TestUnitServer_PostOrder_Success(t *testing.T) {
 	}
 	defer catalogClient.Close()
 
+	invAddr, stopInv := startFakeInventoryServer(t)
+	defer stopInv()
+	invClient, err := inventory.NewClient(invAddr)
+	if err != nil {
+		t.Fatalf("failed to create inventory client: %v", err)
+	}
+	defer invClient.Close()
+
 	accountMock.EXPECT().GetAccount(gomock.Any(), gomock.Any()).Return(&accountpb.GetAccountResponse{
 		Account: &accountpb.Account{Id: "acc1", Name: "Alice"},
 	}, nil)
 
 	catalogMock.EXPECT().GetProducts(gomock.Any(), gomock.Any()).Return(&catalogpb.GetProductsResponse{
-		Products: []*catalogpb.Product{{
-			Id:          "p1",
-			Name:        "prod",
-			Description: "desc",
-			Price:       10,
+		Products: []*catalogpb.ProductInResponse{{
+			Product: &catalogpb.Product{
+				Id:          "p1",
+				Name:        "prod",
+				Description: "desc",
+				Price:       10,
+			},
+			Quntity: 5,
 		}},
 	}, nil)
 
@@ -99,7 +142,7 @@ func TestUnitServer_PostOrder_Success(t *testing.T) {
 		CreatedAt:  time.Now(),
 	}, nil)
 
-	srv := grpcServer{service: mockService, accountClient: accountClient, catalogClient: catalogClient}
+	srv := grpcServer{service: mockService, accountClient: accountClient, catalogClient: catalogClient, inventoryClient: invClient}
 	req := &pb.PostOrderRequest{AccountId: "acc1", Products: []*pb.PostOrderRequest_OrderProduct{{ProductId: "p1", Quantity: 2}}}
 
 	resp, err := srv.PostOrder(context.Background(), req)
@@ -137,13 +180,21 @@ func TestUnitServer_PostOrder_AccountNotFound(t *testing.T) {
 	}
 	defer catalogClient.Close()
 
+	invAddr, stopInv := startFakeInventoryServer(t)
+	defer stopInv()
+	invClient, err := inventory.NewClient(invAddr)
+	if err != nil {
+		t.Fatalf("failed to create inventory client: %v", err)
+	}
+	defer invClient.Close()
+
 	accountMock.EXPECT().GetAccount(gomock.Any(), gomock.Any()).Return(nil, status.Error(codes.NotFound, "not found"))
 
 	ctrlService := gomock.NewController(t)
 	defer ctrlService.Finish()
 	mockService := NewMockService(ctrlService)
 
-	srv := grpcServer{service: mockService, accountClient: accountClient, catalogClient: catalogClient}
+	srv := grpcServer{service: mockService, accountClient: accountClient, catalogClient: catalogClient, inventoryClient: invClient}
 	req := &pb.PostOrderRequest{AccountId: "missing", Products: []*pb.PostOrderRequest_OrderProduct{{ProductId: "p1", Quantity: 1}}}
 
 	_, err = srv.PostOrder(context.Background(), req)
@@ -151,7 +202,6 @@ func TestUnitServer_PostOrder_AccountNotFound(t *testing.T) {
 		t.Fatalf("expected account not found error, got %v", err)
 	}
 
-	// Ensure catalog not hit when account fails
 	catalogMock.EXPECT().GetProducts(gomock.Any(), gomock.Any()).Times(0)
 }
 
@@ -175,6 +225,14 @@ func TestUnitServer_PostOrder_ProductsNotFound(t *testing.T) {
 	}
 	defer catalogClient.Close()
 
+	invAddr, stopInv := startFakeInventoryServer(t)
+	defer stopInv()
+	invClient, err := inventory.NewClient(invAddr)
+	if err != nil {
+		t.Fatalf("failed to create inventory client: %v", err)
+	}
+	defer invClient.Close()
+
 	accountMock.EXPECT().GetAccount(gomock.Any(), gomock.Any()).Return(&accountpb.GetAccountResponse{Account: &accountpb.Account{Id: "acc1", Name: "Alice"}}, nil)
 	catalogMock.EXPECT().GetProducts(gomock.Any(), gomock.Any()).Return(nil, status.Error(codes.NotFound, "missing products"))
 
@@ -182,7 +240,7 @@ func TestUnitServer_PostOrder_ProductsNotFound(t *testing.T) {
 	defer ctrlService.Finish()
 	mockService := NewMockService(ctrlService)
 
-	srv := grpcServer{service: mockService, accountClient: accountClient, catalogClient: catalogClient}
+	srv := grpcServer{service: mockService, accountClient: accountClient, catalogClient: catalogClient, inventoryClient: invClient}
 	req := &pb.PostOrderRequest{AccountId: "acc1", Products: []*pb.PostOrderRequest_OrderProduct{{ProductId: "p1", Quantity: 1}}}
 
 	_, err = srv.PostOrder(context.Background(), req)

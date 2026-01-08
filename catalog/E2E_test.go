@@ -9,14 +9,48 @@ import (
 	"time"
 
 	"github.com/RathodViraj/go-microservice-graphql-grpc/catalog/pb"
+	"github.com/RathodViraj/go-microservice-graphql-grpc/inventory"
+	inventorypb "github.com/RathodViraj/go-microservice-graphql-grpc/inventory/pb"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )
 
+func startFakeInventoryServerE2E(t *testing.T) (string, func()) {
+	t.Helper()
+	lis, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatalf("failed to listen: %v", err)
+	}
+	srv := grpc.NewServer()
+	inventorypb.RegisterInventoryServiceServer(srv, &fakeInventoryServerE2E{})
+	go srv.Serve(lis)
+	stop := func() {
+		srv.Stop()
+		_ = lis.Close()
+	}
+	return lis.Addr().String(), stop
+}
+
+type fakeInventoryServerE2E struct {
+	inventorypb.UnimplementedInventoryServiceServer
+}
+
+func (s *fakeInventoryServerE2E) UpdateStock(ctx context.Context, r *inventorypb.UpdateStockRequest) (*inventorypb.UpdateStockResponse, error) {
+	return &inventorypb.UpdateStockResponse{OutOfStock: []string{}}, nil
+}
+
+func (s *fakeInventoryServerE2E) CheckStock(ctx context.Context, r *inventorypb.CheckStockRequest) (*inventorypb.CheckStockResponse, error) {
+	in := make([]int32, len(r.Pids))
+	for i := range in {
+		in[i] = 100
+	}
+	return &inventorypb.CheckStockResponse{InStock: in}, nil
+}
+
 func startE2EServer(t *testing.T) (string, func()) {
 	url := os.Getenv("ELASTICSEARCH_URL_FOR_TEST")
 	if url == "" {
-		url = "http://localhost:9202"
+		url = "http://localhost:9200"
 	}
 
 	repo, err := NewElasticRepository(url)
@@ -26,18 +60,27 @@ func startE2EServer(t *testing.T) (string, func()) {
 
 	svc := NewSerivce(repo)
 
+	// Setup inventory client
+	invAddr, stopInv := startFakeInventoryServerE2E(t)
+	invClient, err := inventory.NewClient(invAddr)
+	if err != nil {
+		t.Fatalf("failed to create inventory client: %v", err)
+	}
+
 	lis, err := net.Listen("tcp", ":9092")
 	if err != nil {
 		t.Fatalf("failed to listen: %v", err)
 	}
 
 	s := grpc.NewServer()
-	pb.RegisterCatalogServiceServer(s, &grpcServer{service: svc})
+	pb.RegisterCatalogServiceServer(s, &grpcServer{service: svc, inventoryClient: invClient})
 
 	go s.Serve(lis)
 
 	cleanup := func() {
 		s.Stop()
+		invClient.Close()
+		stopInv()
 		repo.Close()
 		lis.Close()
 	}
@@ -81,12 +124,12 @@ func TestE2E_PostAndGetProduct(t *testing.T) {
 		t.Fatalf("get failed: %v", err)
 	}
 
-	if getRes.Product.Name != "E2E Test Laptop" {
-		t.Errorf("unexpected name, got %s", getRes.Product.Name)
+	if getRes.Product.Product.Name != "E2E Test Laptop" {
+		t.Errorf("unexpected name, got %s", getRes.Product.Product.Name)
 	}
 
-	if getRes.Product.Price != 1299.99 {
-		t.Errorf("unexpected price, got %f", getRes.Product.Price)
+	if getRes.Product.Product.Price != 1299.99 {
+		t.Errorf("unexpected price, got %f", getRes.Product.Product.Price)
 	}
 }
 
@@ -189,7 +232,7 @@ func TestE2E_SearchProducts(t *testing.T) {
 
 	found := false
 	for _, p := range res.Products {
-		if p.Name == "Wireless Mechanical Keyboard" {
+		if p.Product.Name == "Wireless Mechanical Keyboard" {
 			found = true
 			break
 		}
@@ -252,10 +295,10 @@ func TestE2E_GetProductsByIds(t *testing.T) {
 	foundMonitor := false
 	foundMouse := false
 	for _, p := range res.Products {
-		if p.Name == "Monitor" {
+		if p.Product.Name == "Monitor" {
 			foundMonitor = true
 		}
-		if p.Name == "Mouse" {
+		if p.Product.Name == "Mouse" {
 			foundMouse = true
 		}
 	}

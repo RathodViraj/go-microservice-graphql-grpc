@@ -10,6 +10,10 @@ type AccountInput struct {
 	Name string `json:"name"`
 }
 
+type CheckStockInput struct {
+	Ids []string `json:"ids"`
+}
+
 type Mutation struct {
 }
 
@@ -52,6 +56,11 @@ type Product struct {
 	Name        string  `json:"name"`
 	Description string  `json:"description"`
 	Price       float64 `json:"price"`
+}
+
+type ProductInResponse struct {
+	Product  *Product `json:"product"`
+	Quantity int      `json:"quantity"`
 }
 
 type ProductInput struct {

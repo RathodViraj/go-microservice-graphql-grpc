@@ -35,3 +35,12 @@ func (s *grpcServer) UpdateStock(ctx context.Context, r *pb.UpdateStockRequest) 
 
 	return &pb.UpdateStockResponse{OutOfStock: res}, err
 }
+
+func (s *grpcServer) CheckStock(ctx context.Context, r *pb.CheckStockRequest) (*pb.CheckStockResponse, error) {
+	res, err := s.service.CheckStock(ctx, r.Pids)
+	if err != nil {
+		return nil, err
+	}
+
+	return &pb.CheckStockResponse{InStock: res}, nil
+}

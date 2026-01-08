@@ -9,7 +9,8 @@ import (
 )
 
 type Config struct {
-	DatabaseURL string `envconfig:"DATABASE_URL"`
+	DatabaseURL  string `envconfig:"DATABASE_URL"`
+	InventoryURL string `envconfig:"INVENTORY_URL"`
 }
 
 func main() {
@@ -22,6 +23,9 @@ func main() {
 	// Default for local development
 	if cfg.DatabaseURL == "" {
 		cfg.DatabaseURL = "http://localhost:9200"
+	}
+	if cfg.InventoryURL == "" {
+		cfg.InventoryURL = "http://localhost:8084"
 	}
 
 	var r catalog.Repository
@@ -37,6 +41,6 @@ func main() {
 
 	log.Println("Listening on port 8082...")
 	s := catalog.NewSerivce(r)
-	log.Fatal(catalog.ListenGRPC(s, 8082))
+	log.Fatal(catalog.ListenGRPC(s, cfg.InventoryURL, 8082))
 
 }

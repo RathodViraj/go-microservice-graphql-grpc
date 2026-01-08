@@ -12,6 +12,7 @@ type Stock struct {
 
 type Service interface {
 	UpdateStock(ctx context.Context, pids []string, deltas []int32) ([]string, error)
+	CheckStock(ctx context.Context, pids []string) ([]int32, error)
 }
 
 type inventoryService struct {
@@ -49,4 +50,8 @@ func (s *inventoryService) UpdateStock(ctx context.Context, pids []string, delta
 		return nil, fmt.Errorf("something went horribly wrong: pids:%d, oosItems:%d", len(pids), len(res))
 	}
 	return res, nil
+}
+
+func (s *inventoryService) CheckStock(ctx context.Context, pids []string) ([]int32, error) {
+	return s.repo.CheckStock(ctx, pids)
 }

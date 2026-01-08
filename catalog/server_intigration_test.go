@@ -6,16 +6,57 @@ import (
 	"testing"
 
 	"github.com/RathodViraj/go-microservice-graphql-grpc/catalog/pb"
+	"github.com/RathodViraj/go-microservice-graphql-grpc/inventory"
+	inventorypb "github.com/RathodViraj/go-microservice-graphql-grpc/inventory/pb"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/test/bufconn"
 )
 
+func startFakeInventoryServerIntegration(t *testing.T) (string, func()) {
+	t.Helper()
+	lis, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatalf("failed to listen: %v", err)
+	}
+	srv := grpc.NewServer()
+	inventorypb.RegisterInventoryServiceServer(srv, &fakeInventoryServerIntegration{})
+	go srv.Serve(lis)
+	stop := func() {
+		srv.Stop()
+		_ = lis.Close()
+	}
+	return lis.Addr().String(), stop
+}
+
+type fakeInventoryServerIntegration struct {
+	inventorypb.UnimplementedInventoryServiceServer
+}
+
+func (s *fakeInventoryServerIntegration) UpdateStock(ctx context.Context, r *inventorypb.UpdateStockRequest) (*inventorypb.UpdateStockResponse, error) {
+	return &inventorypb.UpdateStockResponse{OutOfStock: []string{}}, nil
+}
+
+func (s *fakeInventoryServerIntegration) CheckStock(ctx context.Context, r *inventorypb.CheckStockRequest) (*inventorypb.CheckStockResponse, error) {
+	in := make([]int32, len(r.Pids))
+	for i := range in {
+		in[i] = 100
+	}
+	return &inventorypb.CheckStockResponse{InStock: in}, nil
+}
+
 func startServerIntegrationTest(t *testing.T) (*grpc.ClientConn, func()) {
 	svc := NewSerivce(testRepo)
 
+	// Setup inventory client
+	invAddr, stopInv := startFakeInventoryServerIntegration(t)
+	invClient, err := inventory.NewClient(invAddr)
+	if err != nil {
+		t.Fatalf("failed to create inventory client: %v", err)
+	}
+
 	lis := bufconn.Listen(1024 * 1024)
 	s := grpc.NewServer()
-	pb.RegisterCatalogServiceServer(s, &grpcServer{service: svc})
+	pb.RegisterCatalogServiceServer(s, &grpcServer{service: svc, inventoryClient: invClient})
 
 	go s.Serve(lis)
 
@@ -30,6 +71,8 @@ func startServerIntegrationTest(t *testing.T) (*grpc.ClientConn, func()) {
 
 	cleanup := func() {
 		conn.Close()
+		invClient.Close()
+		stopInv()
 		s.Stop()
 	}
 
@@ -95,12 +138,12 @@ func TestGRPC_GetProduct_Integration(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if getRes.Product.Name != "Laptop" {
-		t.Errorf("expected Laptop, got %s", getRes.Product.Name)
+	if getRes.Product.Product.Name != "Laptop" {
+		t.Errorf("expected Laptop, got %s", getRes.Product.Product.Name)
 	}
 
-	if getRes.Product.Description != "High-performance laptop" {
-		t.Errorf("expected High-performance laptop, got %s", getRes.Product.Description)
+	if getRes.Product.Product.Description != "High-performance laptop" {
+		t.Errorf("expected High-performance laptop, got %s", getRes.Product.Product.Description)
 	}
 }
 
@@ -183,7 +226,7 @@ func TestGRPC_SearchProducts_Integration(t *testing.T) {
 
 	found := false
 	for _, p := range res.Products {
-		if p.Name == "Special Gaming Mouse" {
+		if p.Product.Name == "Special Gaming Mouse" {
 			found = true
 			break
 		}

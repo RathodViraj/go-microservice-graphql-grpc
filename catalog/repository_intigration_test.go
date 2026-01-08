@@ -11,7 +11,7 @@ var testRepo Repository
 func TestMain(m *testing.M) {
 	url := os.Getenv("ELASTICSEARCH_URL_FOR_TEST")
 	if url == "" {
-		url = "http://localhost:9202"
+		url = "http://localhost:9200"
 	}
 
 	r, err := NewElasticRepository(url)

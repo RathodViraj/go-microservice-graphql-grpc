@@ -9,9 +9,10 @@ import (
 )
 
 type Config struct {
-	DatabaseURL string `envconfig:"DATABASE_URL"`
-	AccountURL  string `envconfig:"ACCOUNT_SERVICE_URL"`
-	CatalogURL  string `envconfig:"CATALOG_SERVICE_URL"`
+	DatabaseURL  string `envconfig:"DATABASE_URL"`
+	AccountURL   string `envconfig:"ACCOUNT_SERVICE_URL"`
+	CatalogURL   string `envconfig:"CATALOG_SERVICE_URL"`
+	InventoryURL string `envconfig:"INVENTORY_SERVICE_URL"`
 }
 
 func main() {
@@ -31,6 +32,9 @@ func main() {
 	if cfg.CatalogURL == "" {
 		cfg.CatalogURL = "localhost:8082"
 	}
+	if cfg.InventoryURL == "" {
+		cfg.InventoryURL = "localhost:8084"
+	}
 
 	var r order.Repository
 	for {
@@ -45,5 +49,5 @@ func main() {
 
 	log.Println("Listeneing on port 8083...")
 	s := order.NewOrderService(r)
-	log.Fatal(order.ListenGRPC(s, cfg.AccountURL, cfg.CatalogURL, 8083))
+	log.Fatal(order.ListenGRPC(s, cfg.AccountURL, cfg.CatalogURL, cfg.InventoryURL, 8083))
 }

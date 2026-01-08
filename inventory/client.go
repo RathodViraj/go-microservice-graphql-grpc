@@ -42,3 +42,15 @@ func (c *Client) UpdateStock(ctx context.Context, pids []string, deltas []int32)
 
 	return res.OutOfStock, nil
 }
+
+func (c *Client) CheckStock(ctx context.Context, pids []string) ([]int32, error) {
+	res, err := c.Service.CheckStock(
+		ctx,
+		&pb.CheckStockRequest{Pids: pids},
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	return res.InStock, nil
+}

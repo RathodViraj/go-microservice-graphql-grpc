@@ -9,6 +9,11 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 )
 
+type ProductResponse struct {
+	Product  *Product
+	Quantity int32
+}
+
 type Client struct {
 	Conn    *grpc.ClientConn
 	Service pb.CatalogServiceClient
@@ -50,7 +55,7 @@ func (c *Client) PostProduct(ctx context.Context, name, description string, pric
 	}, nil
 }
 
-func (c *Client) GetProduct(ctx context.Context, id string) (*Product, error) {
+func (c *Client) GetProduct(ctx context.Context, id string) (*ProductResponse, error) {
 	res, err := c.Service.GetProduct(
 		ctx,
 		&pb.GetProductRequest{
@@ -61,15 +66,19 @@ func (c *Client) GetProduct(ctx context.Context, id string) (*Product, error) {
 		return nil, err
 	}
 
-	return &Product{
-		ID:          res.Product.Id,
-		Name:        res.Product.Name,
-		Description: res.Product.Description,
-		Price:       res.Product.Price,
+	return &ProductResponse{
+		Product: &Product{
+			ID:          res.Product.Product.Id,
+			Name:        res.Product.Product.Name,
+			Description: res.Product.Product.Description,
+			Price:       res.Product.Product.Price,
+		},
+		Quantity: res.Product.Quntity,
 	}, nil
+
 }
 
-func (c *Client) GetProducts(ctx context.Context, skip, take uint64, ids []string, query string) ([]Product, error) {
+func (c *Client) GetProducts(ctx context.Context, skip, take uint64, ids []string, query string) ([]ProductResponse, error) {
 	res, err := c.Service.GetProducts(
 		ctx,
 		&pb.GetProductsRequest{
@@ -83,14 +92,20 @@ func (c *Client) GetProducts(ctx context.Context, skip, take uint64, ids []strin
 		return nil, err
 	}
 
-	var products []Product
+	var products []ProductResponse
 	for _, p := range res.Products {
-		products = append(products, Product{
-			ID:          p.Id,
-			Name:        p.Name,
-			Description: p.Description,
-			Price:       p.Price,
-		})
+		products = append(
+			products,
+			ProductResponse{
+				Product: &Product{
+					ID:          p.Product.Id,
+					Name:        p.Product.Name,
+					Description: p.Product.Description,
+					Price:       p.Product.Price,
+				},
+				Quantity: p.Quntity,
+			},
+		)
 	}
 
 	return products, nil

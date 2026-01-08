@@ -9,6 +9,7 @@ import (
 
 	"github.com/RathodViraj/go-microservice-graphql-grpc/account"
 	"github.com/RathodViraj/go-microservice-graphql-grpc/catalog"
+	"github.com/RathodViraj/go-microservice-graphql-grpc/inventory"
 	"github.com/RathodViraj/go-microservice-graphql-grpc/order/pb"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
@@ -16,17 +17,23 @@ import (
 
 type grpcServer struct {
 	pb.UnimplementedOrderServiceServer
-	service       Service
-	accountClient *account.Client
-	catalogClient *catalog.Client
+	service         Service
+	accountClient   *account.Client
+	catalogClient   *catalog.Client
+	inventoryClient *inventory.Client
 }
 
-func ListenGRPC(s Service, accountURL, catalogURL string, port int) error {
+func ListenGRPC(s Service, accountURL, catalogURL, inventoryURL string, port int) error {
 	accountClient, err := account.NewClient(accountURL)
 	if err != nil {
 		return err
 	}
 	catalogClient, err := catalog.NewClient(catalogURL)
+	if err != nil {
+		accountClient.Close()
+		return err
+	}
+	inventroryClient, err := inventory.NewClient(inventoryURL)
 	if err != nil {
 		accountClient.Close()
 		return err
@@ -39,7 +46,7 @@ func ListenGRPC(s Service, accountURL, catalogURL string, port int) error {
 		return err
 	}
 	srv := grpc.NewServer()
-	pb.RegisterOrderServiceServer(srv, &grpcServer{service: s, accountClient: accountClient, catalogClient: catalogClient})
+	pb.RegisterOrderServiceServer(srv, &grpcServer{service: s, accountClient: accountClient, catalogClient: catalogClient, inventoryClient: inventroryClient})
 	reflection.Register(srv)
 	return srv.Serve(lis)
 }
@@ -52,8 +59,19 @@ func (s *grpcServer) PostOrder(ctx context.Context, r *pb.PostOrderRequest) (*pb
 	}
 
 	productIDs := []string{}
+	Quantities := []int32{}
 	for _, prd := range r.Products {
 		productIDs = append(productIDs, prd.ProductId)
+		Quantities = append(Quantities, -1*int32(prd.Quantity))
+	}
+
+	outOfStockProducts, err := s.inventoryClient.UpdateStock(ctx, productIDs, Quantities)
+	if err != nil {
+		log.Println("error checking stock: ", err)
+		return nil, errors.New("failed to update stocks")
+	}
+	if len(outOfStockProducts) != 0 {
+		return nil, fmt.Errorf("this product(s) out of stock: %v", outOfStockProducts)
 	}
 
 	orderedProducts, err := s.catalogClient.GetProducts(ctx, 0, 0, productIDs, "")
@@ -61,18 +79,17 @@ func (s *grpcServer) PostOrder(ctx context.Context, r *pb.PostOrderRequest) (*pb
 		log.Println("Error getting products: ", err)
 		return nil, errors.New("products not found")
 	}
-
 	products := []OrderedProduct{}
 	for _, p := range orderedProducts {
 		product := OrderedProduct{
-			ID:          p.ID,
+			ID:          p.Product.ID,
 			Quantity:    0,
-			Price:       p.Price,
-			Name:        p.Name,
-			Description: p.Description,
+			Price:       p.Product.Price,
+			Name:        p.Product.Name,
+			Description: p.Product.Description,
 		}
 		for _, prd := range r.Products {
-			if prd.ProductId == p.ID {
+			if prd.ProductId == p.Product.ID {
 				product.Quantity = prd.Quantity
 				break
 			}
@@ -151,10 +168,10 @@ func (s *grpcServer) GetOrdersForAccount(ctx context.Context, r *pb.GetOrdersFor
 
 		for _, product := range o.Products {
 			for _, p := range peoducts {
-				if p.ID == product.ID {
-					product.Name = p.Name
-					product.Description = p.Description
-					product.Price = p.Price
+				if p.Product.ID == product.ID {
+					product.Name = p.Product.Name
+					product.Description = p.Product.Description
+					product.Price = p.Product.Price
 					break
 				}
 			}
@@ -165,8 +182,8 @@ func (s *grpcServer) GetOrdersForAccount(ctx context.Context, r *pb.GetOrdersFor
 				Price:       product.Price,
 				Quantity:    product.Quantity,
 			})
-			orders = append(orders, op)
 		}
+		orders = append(orders, op)
 	}
 
 	return &pb.GetOrdersForAccountResponse{Orders: orders}, nil

@@ -99,7 +99,7 @@ jobs:
           --health-retries=10
 
       inventory_db:
-        image: redis/redis:latest
+        image: redis:latest
         ports:
           - 6379:6379
         options: >-
@@ -142,7 +142,7 @@ jobs:
 
     services:
       inventory_db:
-        image: redis/redis:latest
+        image: redis:latest
         ports:
           - 6379:6379
         options: >-

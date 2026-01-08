@@ -104,7 +104,7 @@ services:
     restart: unless-stopped
 
   inventory_db:
-    image: redis/redis:latest
+    image: redis:latest
     ports:
       - "6379:6379"
     restart: unless-stopped

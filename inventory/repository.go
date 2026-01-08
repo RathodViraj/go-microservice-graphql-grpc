@@ -4,6 +4,7 @@ import (
 	"context"
 	"embed"
 	"fmt"
+	"net/url"
 	"strconv"
 	"strings"
 
@@ -21,17 +22,27 @@ type redisRepository struct {
 	script *redis.Script
 }
 
-func NewRepository(url string) (Repository, error) {
+func NewRepository(redisURL string) (Repository, error) {
 	script := redis.NewScript(script)
 	if script == nil {
 		return nil, fmt.Errorf("couldn't load the lua script")
 	}
-	if url == "" {
-		url = "localhost:6379"
+
+	addr := redisURL
+	if strings.HasPrefix(redisURL, "redis://") {
+		parsedURL, err := url.Parse(redisURL)
+		if err != nil {
+			return nil, fmt.Errorf("invalid redis URL: %v", err)
+		}
+		addr = parsedURL.Host
 	}
+	if addr == "" {
+		addr = "localhost:6379"
+	}
+
 	client := redis.NewClient(
 		&redis.Options{
-			Addr:     url,
+			Addr:     addr,
 			Password: "",
 			DB:       0,
 		},

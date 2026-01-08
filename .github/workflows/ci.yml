@@ -80,7 +80,7 @@ jobs:
 
   test-catalog:
     needs: changes
-    if: ${{ needs.changes.outputs.catalog == 'true' || needs.changes.outputs.inventory == 'true' || needs.changes.outputs.common == 'true' }}
+    if: ${{ needs.changes.outputs.catalog == 'true' || needs.changes.outputs.common == 'true' }}
     runs-on: ubuntu-latest
 
     services:
@@ -97,20 +97,9 @@ jobs:
           --health-interval=10s
           --health-timeout=5s
           --health-retries=10
-
-      inventory_db:
-        image: redis:latest
-        ports:
-          - 6379:6379
-        options: >-
-          --health-cmd="redis-cli ping || exit 1"
-          --health-interval=10s
-          --health-timeout=5s
-          --health-retries=5
   
     env:
       ELASTICSEARCH_URL_FOR_TEST: http://localhost:9200
-      REDIS_URL_FOR_TEST: redis://localhost:6379
 
     steps:
       - uses: actions/checkout@v4
@@ -123,12 +112,6 @@ jobs:
         run: |
           until curl -s http://localhost:9200/_cluster/health | grep -q '"status":"green"\|"status":"yellow"'; do
             echo "Waiting for Elasticsearch..."
-            sleep 2
-          done
-      - name: Wait for Redis
-        run: |
-          until redis-cli -h localhost -p 6379 ping | grep -q PONG; do
-            echo "Waiting for Redis..."
             sleep 2
           done
 

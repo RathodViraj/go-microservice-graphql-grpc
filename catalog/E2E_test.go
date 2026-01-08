@@ -60,7 +60,6 @@ func startE2EServer(t *testing.T) (string, func()) {
 
 	svc := NewSerivce(repo)
 
-	// Setup inventory client
 	invAddr, stopInv := startFakeInventoryServerE2E(t)
 	invClient, err := inventory.NewClient(invAddr)
 	if err != nil {

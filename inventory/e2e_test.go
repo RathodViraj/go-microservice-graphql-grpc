@@ -15,7 +15,7 @@ import (
 func startE2EServer(t *testing.T) (string, func()) {
 	url := os.Getenv("REDIS_URL_FOR_TEST")
 	if url == "" {
-		url = "http://localhost:6379"
+		url = "redis://localhost:6379"
 	}
 
 	repo, err := NewRepository(url)

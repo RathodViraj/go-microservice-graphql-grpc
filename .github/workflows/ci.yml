@@ -144,13 +144,6 @@ jobs:
         with:
           go-version: "1.25"
         
-      - name: Wait for Redis
-        run: |
-          until redis-cli -h localhost -p 6379 ping | grep -q PONG; do
-            echo "Waiting for Redis..."
-            sleep 2
-          done
-        
       - name: Run inventory tests
         run: go test ./inventory/... -v
 

@@ -41,17 +41,17 @@ services:
       CATALOG_SERVICE_URL: catalog:8082
     restart: on-failure
 
-    inventory:
-      build:
-        context: .
-        dockerfile: ./inventory/app.dockerfile
-      depends_on:
-        - inventory_db
-      ports:
-        - "8084:8084"
-      environment:
-        REDIS_URL: redis://inventory_db:6379
-      restart: on-failure
+  inventory:
+    build:
+      context: .
+      dockerfile: ./inventory/app.dockerfile
+    depends_on:
+      - inventory_db
+    ports:
+      - "8084:8084"
+    environment:
+      REDIS_URL: redis://inventory_db:6379
+    restart: on-failure
 
   graphql:
     build:

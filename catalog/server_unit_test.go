@@ -16,7 +16,6 @@ import (
 
 const bufSize = 1024 * 1024
 
-// startFakeInventoryServer spins up a simple in-memory inventory gRPC server for testing.
 func startFakeInventoryServer(t *testing.T) (addr string, stop func()) {
 	t.Helper()
 	lis, err := net.Listen("tcp", "127.0.0.1:0")
@@ -50,7 +49,6 @@ func (s *fakeInventoryServer) CheckStock(ctx context.Context, r *inventorypb.Che
 }
 
 func startTestServer(t *testing.T, svc Service) (*grpc.ClientConn, func()) {
-	// Setup inventory client
 	invAddr, stopInv := startFakeInventoryServer(t)
 	invClient, err := inventory.NewClient(invAddr)
 	if err != nil {
